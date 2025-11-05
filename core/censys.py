@@ -1,16 +1,19 @@
+# core/censys.py
+
 import os
 import requests
-
+from requests.auth import HTTPBasicAuth
 
 def check_ip(ip):
-api_id = os.getenv("CENSYS_API_ID")
-api_secret = os.getenv("CENSYS_API_SECRET")
-if not api_id or not api_secret:
-return {"mode": "unauthenticated", "url": f"https://search.censys.io/hosts/{ip}"}
+    api_id = os.getenv("CENSYS_API_ID")
+    api_secret = os.getenv("CENSYS_API_SECRET")
+    if not api_id or not api_secret:
+        return {"error": "CENSYS_API_ID or CENSYS_API_SECRET not set"}
 
+    url = f"https://search.censys.io/api/v2/hosts/{ip}"
 
-url = f"https://search.censys.io/api/v2/hosts/{ip}"
-response = requests.get(url, auth=(api_id, api_secret))
-if response.status_code != 200:
-return {"mode": "authenticated", "error": response.text}
-return {"mode": "authenticated", **response.json()}
+    try:
+        response = requests.get(url, auth=HTTPBasicAuth(api_id, api_secret))
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": str(e)}
