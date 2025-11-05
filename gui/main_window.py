@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import json
 from core.router import scan_ip
+from utils.validators import is_valid_ip
 
 class MainWindow:
     def __init__(self, root):
@@ -24,6 +25,10 @@ class MainWindow:
 
     def scan(self):
     ip = self.ip_var.get()
+    if not is_valid_ip(ip):
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(tk.END, "[ERROR] Invalid IP address.")
+        return
     service = self.service_var.get()
     result = scan_ip(service, ip)
 
