@@ -8,18 +8,18 @@ def check_ip(ip):
     if not api_key:
         return {"error": "ABUSEIPDB_API_KEY not set"}
 
-    url = "https://api.abuseipdb.com/api/v2/check"
-    headers = {
-        "Key": api_key,
-        "Accept": "application/json"
-    }
+    url = f"https://api.abuseipdb.com/api/v2/check"
     params = {
-        "ipAddress": ip,
-        "maxAgeInDays": "90"
+        'ipAddress': ip,
+        'maxAgeInDays': 90
+    }
+    headers = {
+        'Key': api_key,
+        'Accept': 'application/json'
     }
 
     try:
         response = requests.get(url, headers=headers, params=params)
         return response.json()
-    except requests.RequestException as e:
+    except Exception as e:
         return {"error": str(e)}
