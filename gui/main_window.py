@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from talon import scan_ip
+from core.main import scan_ip
 
 class TalonApp:
     def __init__(self, root):
