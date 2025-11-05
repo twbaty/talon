@@ -1,144 +1,80 @@
-# talon/main.py
-
 import tkinter as tk
-from tkinter import ttk
-import importlib
-import json
-import os
-import re
+import webbrowser
 
-from modules import censys
-from modules.base_module import ReconModule
-from utils.command_builder import render_template
-
-# Load field definitions for dynamic builder
-def load_fields():
-    with open(os.path.join("data", "fields_censys.json")) as f:
-        return json.load(f)
-
-MODULES = {
-    "Censys": censys.CensysModule()
+# -----------------------------
+# Core Tool Config
+# -----------------------------
+tools = {
+    "Tier 1": [
+        ("Shodan", "Find exposed devices", "https://www.shodan.io/search?query={}"),
+        ("VirusTotal", "IP/URL/File reputation", "https://www.virustotal.com/gui/search/{}"),
+        ("AbuseIPDB", "IP abuse reports", "https://www.abuseipdb.com/check/{}"),
+        ("URLScan.io", "URL behavior/screenshot", "https://urlscan.io/search/#{}"),
+        ("Hybrid Analysis", "Sandbox file/URL analysis", "https://www.hybrid-analysis.com/search?query={}"),
+        ("MXToolbox", "Mail/DNS tools", "https://mxtoolbox.com/SuperTool.aspx?action=mx%3a{}&run=toolpage"),
+        ("SSL Labs", "Test SSL/TLS config", "https://www.ssllabs.com/ssltest/analyze.html?d={}"),
+        ("HaveIBeenPwned", "Email breach lookup", "https://haveibeenpwned.com/unifiedsearch/{}"),
+        ("Blacklight", "Website tracker analysis", "https://themarkup.org/blacklight")
+    ],
+    "Tier 2": [
+        ("ThreatFox", "Malicious indicators DB", "https://threatfox.abuse.ch/browse.php?search={}"),
+        ("AlienVault OTX", "Threat intelligence pulses", "https://otx.alienvault.com/browse/global/pulses?q={}"),
+        ("Any.run", "Interactive malware sandbox", "https://app.any.run/submissions/#{}"),
+        ("CIRCL Passive DNS", "Historical DNS data", "https://www.circl.lu/services/passive-dns/"),
+        ("IPinfo.io", "IP geolocation info", "https://ipinfo.io/{}/json"),
+        ("GreyNoise", "Internet background scanner data", "https://viz.greynoise.io/ip/{}")
+    ]
 }
 
+# -----------------------------
+# GUI App
+# -----------------------------
 class TalonApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Talon Recon Query Builder")
+        root.title("Talon - SOC Enrichment Launcher")
 
-        self.fields = load_fields()
-        self.conditions = []
+        # Input bar
+        self.entry = tk.Entry(root, width=60, font=("Consolas", 12))
+        self.entry.grid(row=0, column=0, padx=10, pady=10, columnspan=2)
 
-        self.notebook = ttk.Notebook(root)
-        self.notebook.pack(fill="both", expand=True)
+        # Submit button
+        submit_btn = tk.Button(root, text="Enrich", command=self.open_links, bg="#2b7a78", fg="white")
+        submit_btn.grid(row=0, column=2, padx=5)
 
-        self.build_template_tab()
-        self.build_field_tab()
+        # Tool sections
+        self.button_refs = {}
+        row_offset = 1
+        for tier, entries in tools.items():
+            tk.Label(root, text=tier, font=("Arial", 12, "bold"), pady=10).grid(row=row_offset, column=0, sticky="w", padx=10)
+            row_offset += 1
 
-    # ---------------- Template Tab ----------------
-    def build_template_tab(self):
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="Template Builder")
+            for name, desc, url in entries:
+                b = tk.Button(root, text=f"{name}: {desc}", anchor="w", width=60,
+                             command=lambda url=url: self.launch_blank(url))
+                b.grid(row=row_offset, column=0, columnspan=3, sticky="w", padx=20, pady=2)
+                self.button_refs[name] = (b, url)
+                row_offset += 1
 
-        self.selected_module = tk.StringVar()
-        self.selected_query = tk.StringVar()
-        self.param_entries = {}
-
-        ttk.Label(frame, text="Recon Module").grid(row=0, column=0, sticky="w", padx=10, pady=5)
-        self.module_dropdown = ttk.Combobox(frame, textvariable=self.selected_module, values=list(MODULES.keys()), state="readonly")
-        self.module_dropdown.grid(row=0, column=1, padx=10, pady=5)
-        self.module_dropdown.bind("<<ComboboxSelected>>", self.on_module_change)
-
-        ttk.Label(frame, text="Query Template").grid(row=1, column=0, sticky="w", padx=10, pady=5)
-        self.query_dropdown = ttk.Combobox(frame, textvariable=self.selected_query, state="readonly")
-        self.query_dropdown.grid(row=1, column=1, padx=10, pady=5)
-        self.query_dropdown.bind("<<ComboboxSelected>>", self.on_query_change)
-
-        self.params_frame = ttk.LabelFrame(frame, text="Parameters")
-        self.params_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
-
-        ttk.Label(frame, text="Final Query").grid(row=3, column=0, sticky="nw", padx=10, pady=5)
-        self.output_text = tk.Text(frame, height=4, width=60)
-        self.output_text.grid(row=3, column=1, padx=10, pady=5)
-
-        ttk.Button(frame, text="Build Query", command=self.build_query).grid(row=4, column=1, sticky="e", padx=10, pady=10)
-
-        self.module_dropdown.current(0)
-        self.on_module_change()
-
-    def on_module_change(self, event=None):
-        module_name = self.selected_module.get()
-        self.current_module = MODULES[module_name]
-        self.query_templates = self.current_module.get_queries()
-        self.query_dropdown["values"] = list(self.query_templates.keys())
-        if self.query_templates:
-            self.query_dropdown.current(0)
-            self.on_query_change()
-
-    def on_query_change(self, event=None):
-        for widget in self.params_frame.winfo_children():
-            widget.destroy()
-        self.param_entries.clear()
-
-        template_key = self.selected_query.get()
-        template = self.query_templates.get(template_key, "")
-        needed_params = re.findall(r"{(.*?)}", template)
-
-        for i, param in enumerate(needed_params):
-            ttk.Label(self.params_frame, text=param).grid(row=i, column=0, sticky="w", padx=5, pady=2)
-            entry = ttk.Entry(self.params_frame, width=40)
-            entry.grid(row=i, column=1, padx=5, pady=2)
-            self.param_entries[param] = entry
-
-    def build_query(self):
-        template_key = self.selected_query.get()
-        template = self.query_templates.get(template_key, "")
-        params = {k: e.get() for k, e in self.param_entries.items()}
-        result = self.current_module.render_query(template, params)
-        self.output_text.delete("1.0", tk.END)
-        self.output_text.insert(tk.END, result)
-
-    # ---------------- Field-Based Query Composer ----------------
-    def build_field_tab(self):
-        frame = ttk.Frame(self.notebook)
-        self.notebook.add(frame, text="Field Composer")
-
-        self.selected_field = tk.StringVar()
-        self.condition_value = tk.StringVar()
-
-        # Field dropdown
-        ttk.Label(frame, text="Field").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.field_dropdown = ttk.Combobox(frame, textvariable=self.selected_field, values=list(self.fields.keys()), state="readonly", width=40)
-        self.field_dropdown.grid(row=0, column=1, padx=10, pady=5)
-
-        # Value entry
-        ttk.Label(frame, text="Value").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-        self.value_entry = ttk.Entry(frame, textvariable=self.condition_value, width=42)
-        self.value_entry.grid(row=1, column=1, padx=10, pady=5)
-
-        # Add condition
-        ttk.Button(frame, text="Add Condition", command=self.add_condition).grid(row=2, column=1, sticky="e", padx=10, pady=5)
-
-        # Preview box
-        ttk.Label(frame, text="Final Query").grid(row=3, column=0, sticky="nw", padx=10, pady=5)
-        self.composer_output = tk.Text(frame, height=6, width=60)
-        self.composer_output.grid(row=3, column=1, padx=10, pady=5)
-
-    def add_condition(self):
-        field = self.selected_field.get()
-        value = self.condition_value.get()
-        if not field or not value:
+    def open_links(self):
+        value = self.entry.get().strip()
+        if not value:
             return
-        quoted = f'"{value}"' if self.fields[field]["type"] == "string" else value
-        clause = f"{field}: {quoted}"
-        self.conditions.append(clause)
 
-        # Build final string
-        query = " AND ".join(self.conditions)
-        self.composer_output.delete("1.0", tk.END)
-        self.composer_output.insert(tk.END, query)
-        self.condition_value.set("")
+        for name, (btn, url) in self.button_refs.items():
+            try:
+                full_url = url.format(value) if "{}" in url else url
+                btn.config(command=lambda u=full_url: webbrowser.open_new_tab(u))
+            except Exception as e:
+                print(f"Error creating link for {name}: {e}")
 
-if __name__ == "__main__":
+    def launch_blank(self, url):
+        webbrowser.open_new_tab(url)
+
+# -----------------------------
+# Launch it
+# -----------------------------
+if __name__ == '__main__':
     root = tk.Tk()
     app = TalonApp(root)
     root.mainloop()
