@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 import json
 
 # Only keep the one you actually use
-from core.main import scan_ip  # Assuming dispatch lives here
+from core.router import scan_ip  # Assuming dispatch lives here
 
 class TalonApp:
     def __init__(self, root):
