@@ -1,0 +1,22 @@
+{
+  "services.software.name": {
+    "label": "Software Name",
+    "type": "string"
+  },
+  "services.port": {
+    "label": "Port",
+    "type": "int"
+  },
+  "location.country": {
+    "label": "Country",
+    "type": "string"
+  },
+  "autonomous_system.name": {
+    "label": "ASN Name",
+    "type": "string"
+  },
+  "ip": {
+    "label": "IP Address",
+    "type": "string"
+  }
+}
