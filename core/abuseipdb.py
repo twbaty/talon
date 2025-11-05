@@ -1,25 +1,25 @@
-# core/abuseipdb.py
-
 import os
 import requests
 
-def check_ip(ip):
-    api_key = os.getenv("ABUSEIPDB_API_KEY")
-    if not api_key:
-        return {"error": "ABUSEIPDB_API_KEY not set"}
+ABUSEIPDB_API = "https://api.abuseipdb.com/api/v2/check"
 
-    url = f"https://api.abuseipdb.com/api/v2/check"
-    params = {
-        'ipAddress': ip,
-        'maxAgeInDays': 90
-    }
+def query_abuseipdb(ip):
+    api_key = os.getenv("ABUSEIPDB_KEY")
+    if not api_key:
+        return {"error": "Missing AbuseIPDB API key"}
+
     headers = {
-        'Key': api_key,
-        'Accept': 'application/json'
+        "Accept": "application/json",
+        "Key": api_key
+    }
+
+    params = {
+        "ipAddress": ip,
+        "maxAgeInDays": 90
     }
 
     try:
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(ABUSEIPDB_API, headers=headers, params=params)
         return response.json()
     except Exception as e:
         return {"error": str(e)}
