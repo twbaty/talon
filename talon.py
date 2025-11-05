@@ -1,80 +1,95 @@
-import tkinter as tk
-import webbrowser
+"""
+TALON - SOC Enrichment Assistant (Starter GUI)
+Version: 0.1
+"""
 
-# -----------------------------
-# Core Tool Config
-# -----------------------------
-tools = {
+import tkinter as tk
+from tkinter import ttk
+import webbrowser
+import re
+
+# Tool definitions
+TOOLS = {
     "Tier 1": [
-        ("Shodan", "Find exposed devices", "https://www.shodan.io/search?query={}"),
-        ("VirusTotal", "IP/URL/File reputation", "https://www.virustotal.com/gui/search/{}"),
-        ("AbuseIPDB", "IP abuse reports", "https://www.abuseipdb.com/check/{}"),
-        ("URLScan.io", "URL behavior/screenshot", "https://urlscan.io/search/#{}"),
-        ("Hybrid Analysis", "Sandbox file/URL analysis", "https://www.hybrid-analysis.com/search?query={}"),
-        ("MXToolbox", "Mail/DNS tools", "https://mxtoolbox.com/SuperTool.aspx?action=mx%3a{}&run=toolpage"),
-        ("SSL Labs", "Test SSL/TLS config", "https://www.ssllabs.com/ssltest/analyze.html?d={}"),
-        ("HaveIBeenPwned", "Email breach lookup", "https://haveibeenpwned.com/unifiedsearch/{}"),
-        ("Blacklight", "Website tracker analysis", "https://themarkup.org/blacklight")
+        ("Shodan", "https://www.shodan.io/search?query={input}"),
+        ("VirusTotal", "https://www.virustotal.com/gui/search/{input}"),
+        ("AbuseIPDB", "https://www.abuseipdb.com/check/{input}"),
+        ("URLScan.io", "https://urlscan.io/search/#{input}"),
+        ("Hybrid Analysis", "https://www.hybrid-analysis.com/search?query={input}"),
+        ("MXToolbox", "https://mxtoolbox.com/SuperTool.aspx?action=mx%3a{input}"),
+        ("SSL Labs", "https://www.ssllabs.com/ssltest/analyze.html?d={input}"),
+        ("HaveIBeenPwned", "https://haveibeenpwned.com/unifiedsearch/{input}"),
+        ("Blacklight", "https://themarkup.org/blacklight?site={input}")
     ],
     "Tier 2": [
-        ("ThreatFox", "Malicious indicators DB", "https://threatfox.abuse.ch/browse.php?search={}"),
-        ("AlienVault OTX", "Threat intelligence pulses", "https://otx.alienvault.com/browse/global/pulses?q={}"),
-        ("Any.run", "Interactive malware sandbox", "https://app.any.run/submissions/#{}"),
-        ("CIRCL Passive DNS", "Historical DNS data", "https://www.circl.lu/services/passive-dns/"),
-        ("IPinfo.io", "IP geolocation info", "https://ipinfo.io/{}/json"),
-        ("GreyNoise", "Internet background scanner data", "https://viz.greynoise.io/ip/{}")
+        ("ThreatFox", "https://threatfox.abuse.ch/browse/#search={input}"),
+        ("AlienVault OTX", "https://otx.alienvault.com/indicator/general/{type}/{input}"),
+        ("Any.run", "https://app.any.run/submissions/#search={input}"),
+        ("CIRCL Passive DNS", "https://www.circl.lu/services/passive-dns/"),  # Manual
+        ("IPinfo.io", "https://ipinfo.io/{input}"),
+        ("GreyNoise", "https://viz.greynoise.io/ip/{input}")
     ]
 }
 
-# -----------------------------
-# GUI App
-# -----------------------------
-class TalonApp:
-    def __init__(self, root):
-        self.root = root
-        root.title("Talon - SOC Enrichment Launcher")
+# Type detection (very basic)
+def detect_type(ioc):
+    if re.match(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ioc):
+        return "ip"
+    elif re.match(r"^(https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ioc):
+        return "domain"
+    elif re.match(r"^[A-Fa-f0-9]{32,64}$", ioc):
+        return "hash"
+    else:
+        return "unknown"
 
-        # Input bar
-        self.entry = tk.Entry(root, width=60, font=("Consolas", 12))
-        self.entry.grid(row=0, column=0, padx=10, pady=10, columnspan=2)
+# Main GUI app
+class TalonApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("TALON - SOC Enrichment Assistant")
+        self.geometry("720x600")
 
-        # Submit button
-        submit_btn = tk.Button(root, text="Enrich", command=self.open_links, bg="#2b7a78", fg="white")
-        submit_btn.grid(row=0, column=2, padx=5)
+        self.input_label = ttk.Label(self, text="Enter IOC (IP / URL / Domain / Hash):")
+        self.input_label.pack(pady=10)
 
-        # Tool sections
-        self.button_refs = {}
-        row_offset = 1
-        for tier, entries in tools.items():
-            tk.Label(root, text=tier, font=("Arial", 12, "bold"), pady=10).grid(row=row_offset, column=0, sticky="w", padx=10)
-            row_offset += 1
+        self.input_entry = ttk.Entry(self, width=80)
+        self.input_entry.pack(pady=5)
 
-            for name, desc, url in entries:
-                b = tk.Button(root, text=f"{name}: {desc}", anchor="w", width=60,
-                             command=lambda url=url: self.launch_blank(url))
-                b.grid(row=row_offset, column=0, columnspan=3, sticky="w", padx=20, pady=2)
-                self.button_refs[name] = (b, url)
-                row_offset += 1
+        self.detected_type = tk.StringVar()
+        self.type_label = ttk.Label(self, textvariable=self.detected_type)
+        self.type_label.pack(pady=5)
 
-    def open_links(self):
-        value = self.entry.get().strip()
-        if not value:
-            return
+        self.generate_btn = ttk.Button(self, text="Generate Links", command=self.build_buttons)
+        self.generate_btn.pack(pady=10)
 
-        for name, (btn, url) in self.button_refs.items():
-            try:
-                full_url = url.format(value) if "{}" in url else url
-                btn.config(command=lambda u=full_url: webbrowser.open_new_tab(u))
-            except Exception as e:
-                print(f"Error creating link for {name}: {e}")
+        self.button_frame = ttk.Notebook(self)
+        self.button_frame.pack(fill="both", expand=True)
 
-    def launch_blank(self, url):
-        webbrowser.open_new_tab(url)
+        self.frames = {}
+        for tier in TOOLS:
+            frame = ttk.Frame(self.button_frame)
+            self.button_frame.add(frame, text=tier)
+            self.frames[tier] = frame
 
-# -----------------------------
-# Launch it
-# -----------------------------
-if __name__ == '__main__':
-    root = tk.Tk()
-    app = TalonApp(root)
-    root.mainloop()
+    def build_buttons(self):
+        ioc = self.input_entry.get().strip()
+        ioc_type = detect_type(ioc)
+        self.detected_type.set(f"Detected Type: {ioc_type.upper()}")
+
+        for tier, frame in self.frames.items():
+            for widget in frame.winfo_children():
+                widget.destroy()
+
+            for name, url in TOOLS[tier]:
+                if "{type}" in url:
+                    final_url = url.replace("{input}", ioc).replace("{type}", ioc_type)
+                else:
+                    final_url = url.replace("{input}", ioc)
+
+                b = ttk.Button(frame, text=name, command=lambda u=final_url: webbrowser.open(u))
+                b.pack(pady=2, padx=10, anchor='w')
+
+
+if __name__ == "__main__":
+    app = TalonApp()
+    app.mainloop()
