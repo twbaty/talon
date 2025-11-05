@@ -1,95 +1,77 @@
-"""
-TALON - SOC Enrichment Assistant (Starter GUI)
-Version: 0.1
-"""
-
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, scrolledtext, messagebox
 import webbrowser
-import re
+import requests
 
-# Tool definitions
-TOOLS = {
-    "Tier 1": [
-        ("Shodan", "https://www.shodan.io/search?query={input}"),
-        ("VirusTotal", "https://www.virustotal.com/gui/search/{input}"),
-        ("AbuseIPDB", "https://www.abuseipdb.com/check/{input}"),
-        ("URLScan.io", "https://urlscan.io/search/#{input}"),
-        ("Hybrid Analysis", "https://www.hybrid-analysis.com/search?query={input}"),
-        ("MXToolbox", "https://mxtoolbox.com/SuperTool.aspx?action=mx%3a{input}"),
-        ("SSL Labs", "https://www.ssllabs.com/ssltest/analyze.html?d={input}"),
-        ("HaveIBeenPwned", "https://haveibeenpwned.com/unifiedsearch/{input}"),
-        ("Blacklight", "https://themarkup.org/blacklight?site={input}")
-    ],
-    "Tier 2": [
-        ("ThreatFox", "https://threatfox.abuse.ch/browse/#search={input}"),
-        ("AlienVault OTX", "https://otx.alienvault.com/indicator/general/{type}/{input}"),
-        ("Any.run", "https://app.any.run/submissions/#search={input}"),
-        ("CIRCL Passive DNS", "https://www.circl.lu/services/passive-dns/"),  # Manual
-        ("IPinfo.io", "https://ipinfo.io/{input}"),
-        ("GreyNoise", "https://viz.greynoise.io/ip/{input}")
-    ]
-}
+# AbuseIPDB API constants
+API_URL = "https://api.abuseipdb.com/api/v2/check"
+BROWSER_URL_TEMPLATE = "https://www.abuseipdb.com/check/{}"
 
-# Type detection (very basic)
-def detect_type(ioc):
-    if re.match(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ioc):
-        return "ip"
-    elif re.match(r"^(https?://)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ioc):
-        return "domain"
-    elif re.match(r"^[A-Fa-f0-9]{32,64}$", ioc):
-        return "hash"
-    else:
-        return "unknown"
+def open_in_browser(ip):
+    url = BROWSER_URL_TEMPLATE.format(ip)
+    webbrowser.open(url)
 
-# Main GUI app
-class TalonApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("TALON - SOC Enrichment Assistant")
-        self.geometry("720x600")
+def call_abuseipdb_api(ip, key, output_text):
+    headers = {
+        'Key': key,
+        'Accept': 'application/json'
+    }
+    params = {
+        'ipAddress': ip,
+        'maxAgeInDays': 90
+    }
 
-        self.input_label = ttk.Label(self, text="Enter IOC (IP / URL / Domain / Hash):")
-        self.input_label.pack(pady=10)
+    try:
+        response = requests.get(API_URL, headers=headers, params=params)
+        response.raise_for_status()
+        json_data = response.json()
+        output_text.delete("1.0", tk.END)
+        output_text.insert(tk.END, f"AbuseIPDB Results for {ip}:\n\n")
+        output_text.insert(tk.END, json_data)
+    except Exception as e:
+        messagebox.showerror("API Error", str(e))
 
-        self.input_entry = ttk.Entry(self, width=80)
-        self.input_entry.pack(pady=5)
+def handle_lookup():
+    ip = ip_entry.get().strip()
+    key = key_entry.get().strip()
+    mode = mode_var.get()
 
-        self.detected_type = tk.StringVar()
-        self.type_label = ttk.Label(self, textvariable=self.detected_type)
-        self.type_label.pack(pady=5)
+    if not ip:
+        messagebox.showwarning("Input Error", "Please enter a valid IP address.")
+        return
 
-        self.generate_btn = ttk.Button(self, text="Generate Links", command=self.build_buttons)
-        self.generate_btn.pack(pady=10)
+    if mode == "unauth":
+        open_in_browser(ip)
+    elif mode == "api":
+        if not key:
+            messagebox.showwarning("API Key Missing", "Please enter an API key for API mode.")
+            return
+        call_abuseipdb_api(ip, key, output_text)
 
-        self.button_frame = ttk.Notebook(self)
-        self.button_frame.pack(fill="both", expand=True)
+# GUI setup
+root = tk.Tk()
+root.title("Talon - AbuseIPDB Lookup")
 
-        self.frames = {}
-        for tier in TOOLS:
-            frame = ttk.Frame(self.button_frame)
-            self.button_frame.add(frame, text=tier)
-            self.frames[tier] = frame
+main_frame = ttk.Frame(root, padding="10")
+main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-    def build_buttons(self):
-        ioc = self.input_entry.get().strip()
-        ioc_type = detect_type(ioc)
-        self.detected_type.set(f"Detected Type: {ioc_type.upper()}")
+ttk.Label(main_frame, text="IP Address:").grid(row=0, column=0, sticky=tk.W)
+ip_entry = ttk.Entry(main_frame, width=30)
+ip_entry.grid(row=0, column=1, columnspan=2, sticky=tk.W)
 
-        for tier, frame in self.frames.items():
-            for widget in frame.winfo_children():
-                widget.destroy()
+ttk.Label(main_frame, text="API Key (optional):").grid(row=1, column=0, sticky=tk.W)
+key_entry = ttk.Entry(main_frame, width=40, show="*")
+key_entry.grid(row=1, column=1, columnspan=2, sticky=tk.W)
 
-            for name, url in TOOLS[tier]:
-                if "{type}" in url:
-                    final_url = url.replace("{input}", ioc).replace("{type}", ioc_type)
-                else:
-                    final_url = url.replace("{input}", ioc)
+mode_var = tk.StringVar(value="unauth")
+ttk.Label(main_frame, text="Mode:").grid(row=2, column=0, sticky=tk.W)
+ttk.Radiobutton(main_frame, text="Unauthenticated (Open in browser)", variable=mode_var, value="unauth").grid(row=2, column=1, sticky=tk.W)
+ttk.Radiobutton(main_frame, text="API Mode (use key)", variable=mode_var, value="api").grid(row=2, column=2, sticky=tk.W)
 
-                b = ttk.Button(frame, text=name, command=lambda u=final_url: webbrowser.open(u))
-                b.pack(pady=2, padx=10, anchor='w')
+lookup_button = ttk.Button(main_frame, text="Lookup", command=handle_lookup)
+lookup_button.grid(row=3, column=0, columnspan=3, pady=10)
 
+output_text = scrolledtext.ScrolledText(main_frame, wrap=tk.WORD, width=80, height=20)
+output_text.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E))
 
-if __name__ == "__main__":
-    app = TalonApp()
-    app.mainloop()
+root.mainloop()
