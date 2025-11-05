@@ -12,3 +12,8 @@ def scan_ip(service, ip):
         return virustotal.check_ip(ip)
     else:
         return {"error": "Unknown service"}
+
+from gui.main_window import launch_gui
+
+if __name__ == "__main__":
+    launch_gui()
