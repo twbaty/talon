@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox
 import importlib
 import json
 import os
+import re
 
 from modules import censys
 from modules.base_module import ReconModule
@@ -68,7 +69,7 @@ class TalonApp:
 
         template_key = self.selected_query.get()
         template = self.query_templates.get(template_key, "")
-        needed_params = [p.strip("{}") for p in template.split() if p.startswith("{") and p.endswith("}")]
+        needed_params = re.findall(r"{(.*?)}", template)
         
         for i, param in enumerate(needed_params):
             ttk.Label(self.params_frame, text=param).grid(row=i, column=0, sticky="w", padx=5, pady=2)
