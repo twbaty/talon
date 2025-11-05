@@ -1,4 +1,0 @@
-{
-  "Multi-field: Country + Port + Software": "services.software.name: \"{software}\" AND location.country: \"{country}\" AND services.port: {port}"
-}
-
