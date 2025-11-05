@@ -44,7 +44,7 @@ class TalonApp:
             return
 
         try:
-            result = scan_ip(service, ip)
+            result = scan_ip(ip)
         except Exception as e:
             result = {"error": str(e)}
 
