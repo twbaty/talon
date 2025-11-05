@@ -137,3 +137,8 @@ class TalonApp:
         self.composer_output.delete("1.0", tk.END)
         self.composer_output.insert(tk.END, query)
         self.condition_value.set("")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = TalonApp(root)
+    root.mainloop()
