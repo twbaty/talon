@@ -1,16 +1,20 @@
+# core/virustotal.py
+
 import os
 import requests
 
-
 def check_ip(ip):
-api_key = os.getenv("VIRUSTOTAL_API_KEY")
-if not api_key:
-return {"mode": "unauthenticated", "url": f"https://www.virustotal.com/gui/ip-address/{ip}"}
+    api_key = os.getenv("VIRUSTOTAL_API_KEY")
+    if not api_key:
+        return {
+            "error": "VIRUSTOTAL_API_KEY not set"
+        }
 
+    url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
+    headers = {"x-apikey": api_key}
 
-url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip}"
-headers = {"x-apikey": api_key}
-response = requests.get(url, headers=headers)
-if response.status_code != 200:
-return {"mode": "authenticated", "error": response.text}
-return {"mode": "authenticated", **response.json()}
+    try:
+        response = requests.get(url, headers=headers)
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": str(e)}
