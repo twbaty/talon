@@ -20,20 +20,18 @@ class MainWindow:
         self.target_ip_var = tk.StringVar()
         ttk.Entry(root, textvariable=self.target_ip_var).grid(row=0, column=1, padx=5, pady=5, sticky="we")
 
-        # “Ignore API Key” Checkbox
+        # “Ignore API Key” Checkbox (tk version for reliable label updates)
         self.ignore_key_var = tk.BooleanVar(value=False)
-        self.api_key_checkbox = ttk.Checkbutton(root, text="Ignore API Key", variable=self.ignore_key_var)
+        self.api_key_checkbox = tk.Checkbutton(root, text="Ignore API Key", variable=self.ignore_key_var)
         self.api_key_checkbox.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
         if not config_has_api_key():  # No key exists → force ignore mode
             self.ignore_key_var.set(True)
-            self.api_key_checkbox.state(['disabled'])
-            self.api_key_checkbox.config(text="Fallback mode: manual query")
+            self.api_key_checkbox.config(state="disabled", text="Fallback mode: manual query")
         else:
             # Key exists → default use key (ignore = False)
             self.ignore_key_var.set(False)
-            self.api_key_checkbox.state(['!disabled'])
-            self.api_key_checkbox.config(text="Ignore API Key")
+            self.api_key_checkbox.config(state="normal", text="Ignore API Key")
 
         # Scan Button
         ttk.Button(root, text="Scan", command=self.scan).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
