@@ -2,6 +2,13 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 from core.router import scan_ip
 from core.config import config_has_api_key
+from pathlib import Path
+
+def get_api_key():
+    key_path = Path("config") / "apikey.txt"
+    if key_path.exists():
+        return key_path.read_text().strip()
+    return None
 
 class MainWindow:
     def __init__(self, root):
