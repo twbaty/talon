@@ -3,6 +3,9 @@ from tkinter import ttk, scrolledtext, messagebox
 from core.router import scan_ip
 from core.config import config_has_api_key
 from pathlib import Path
+from config_loader import load_api_key
+from dotenv import load_dotenv
+import os
 
 def get_api_key():
     key_path = Path("config") / "apikey.txt"
