@@ -1,58 +1,39 @@
-import os
 import requests
 from bs4 import BeautifulSoup
-from utils.logging import log_error
+from core.config import get_api_key, config_has_api_key
 
-ABUSEIPDB_API_URL = "https://api.abuseipdb.com/api/v2/check"
-ABUSEIPDB_BROWSER_URL = "https://www.abuseipdb.com/check/{}"
+def query_abuseipdb(ip: str, use_api_key: bool = True):
+    if use_api_key and config_has_api_key():
+        return _api_lookup(ip)
+    else:
+        return _html_lookup(ip)
 
-def query_abuseipdb(ip, use_api_key=False):
-    """
-    Attempts to query AbuseIPDB. If API key is present and allowed, use API.
-    Otherwise, fall back to scraping HTML.
-    """
+def _api_lookup(ip: str):
+    api_key = get_api_key()
+    url = "https://api.abuseipdb.com/api/v2/check"
+    headers = {"Key": api_key, "Accept": "application/json"}
+    params = {"ipAddress": ip, "maxAgeInDays": 90}
+    resp = requests.get(url, headers=headers, params=params)
+    resp.raise_for_status()
+    data = resp.json()["data"]
+    return {
+        "ip": ip,
+        "source": "AbuseIPDB API",
+        "abuse_score": data.get("abuseConfidenceScore"),
+        "reports": data.get("totalReports"),
+        "country": data.get("countryCode"),
+    }
 
-    api_key = os.getenv("ABUSEIPDB_API_KEY")
-
-    # Use API key only if both present and allowed
-    if use_api_key and api_key:
-        headers = {
-            "Accept": "application/json",
-            "Key": api_key
-        }
-        params = {
-            "ipAddress": ip,
-            "maxAgeInDays": 90
-        }
-
-        try:
-            response = requests.get(ABUSEIPDB_API_URL, headers=headers, params=params)
-            return response.json()
-        except Exception as e:
-            log_error(f"AbuseIPDB API call failed: {e}")
-            return {"error": f"AbuseIPDB API call failed: {str(e)}"}
-
-    # Fallback: HTML scrape without API key
-    try:
-        url = ABUSEIPDB_BROWSER_URL.format(ip)
-        html = requests.get(url, timeout=10).text
-        soup = BeautifulSoup(html, "html.parser")
-
-        # Example: grab Abuse Confidence Score
-        score_div = soup.find("div", class_="well")  # update selector if layout changes
-        score = None
-        if score_div:
-            for line in score_div.stripped_strings:
-                if "Abuse Confidence Score" in line:
-                    score = line
-                    break
-
-        return {
-            "ip": ip,
-            "source": "AbuseIPDB (HTML fallback)",
-            "abuse_score": score or "Not found or layout changed"
-        }
-
-    except Exception as e:
-        log_error(f"AbuseIPDB fallback (HTML) failed: {e}")
-        return {"error": f"AbuseIPDB HTML fallback failed: {str(e)}"}
+def _html_lookup(ip: str):
+    url = f"https://www.abuseipdb.com/check/{ip}"
+    # Add User-Agent to avoid 403 Forbidden
+    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    score_elem = soup.find("div", class_="well")
+    score_text = score_elem.get_text(strip=True) if score_elem else "Not found or layout changed"
+    return {
+        "ip": ip,
+        "source": "AbuseIPDB (HTML fallback)",
+        "abuse_score": score_text,
+    }
