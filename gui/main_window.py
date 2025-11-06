@@ -1,17 +1,18 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 from core.router import scan_ip
-from core.config import config_has_api_key
+from core.config import get_api_key, config_has_api_key
 from pathlib import Path
 from config_loader import load_api_key
 from dotenv import load_dotenv
 import os
 
-def get_api_key():
-    key_path = Path("config") / "apikey.txt"
-    if key_path.exists():
-        return key_path.read_text().strip()
-    return None
+def show_api_key(self):
+    api_key = get_api_key()
+    if api_key:
+        messagebox.showinfo("API Key", f"The current API key is:\n{api_key}")
+    else:
+        messagebox.showwarning("API Key", "No API key found.")
 
 class MainWindow:
     # temporary debug
