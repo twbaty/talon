@@ -26,8 +26,13 @@ def _api_lookup(ip: str):
 
 def _html_lookup(ip: str):
     url = f"https://www.abuseipdb.com/check/{ip}"
-    # Use quirky Lynx UA to avoid 403
-    headers = {"User-Agent": "Lynx/2.8.9rel.1 libwww-FM/2.14 SSL-MM/1.4.1"}
+    # Mimic a real browser to avoid 403
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:117.0) Gecko/20100101 Firefox/117.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Connection": "keep-alive",
+    }
     resp = requests.get(url, headers=headers)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
