@@ -20,18 +20,17 @@ class MainWindow:
         self.target_ip_var = tk.StringVar()
         ttk.Entry(root, textvariable=self.target_ip_var).grid(row=0, column=1, padx=5, pady=5, sticky="we")
 
-        # API Key Status Checkbox
-        self.has_key_var = tk.BooleanVar(value=False)
-        self.api_key_checkbox = ttk.Checkbutton(root, text="Use API Key", variable=self.has_key_var)
+        # “Ignore API Key” Checkbox
+        self.ignore_key_var = tk.BooleanVar(value=False)
+        self.api_key_checkbox = ttk.Checkbutton(root, text="Ignore API Key", variable=self.ignore_key_var)
         self.api_key_checkbox.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-        if not config_has_api_key():
-            # No key exists → forced HTML fallback
-            self.has_key_var.set(True)        # Checked
+        if not config_has_api_key():  # No key exists → force ignore mode
+            self.ignore_key_var.set(True)
             self.api_key_checkbox.state(['disabled'])
         else:
-            # Key exists → default = use API
-            self.has_key_var.set(False)       # Unchecked
+            # Key exists → default use key (ignore = False)
+            self.ignore_key_var.set(False)
             self.api_key_checkbox.state(['!disabled'])
 
         # Scan Button
@@ -51,7 +50,11 @@ class MainWindow:
             messagebox.showerror("Error", "Please enter a target IP.")
             return
 
-        use_api_key = self.has_key_var.get()
+        ignore_key = self.ignore_key_var.get()
+        use_api_key = not ignore_key
+
+        print(f"[DEBUG] ignore_key = {ignore_key}")
+        print(f"[DEBUG] use_api_key = {use_api_key}")
 
         try:
             result = scan_ip(target_ip, use_api_key=use_api_key)
@@ -68,7 +71,6 @@ class MainWindow:
                 self.result_text.insert(tk.END, f"{k}: {v}\n")
         else:
             self.result_text.insert(tk.END, str(result))
-
 
 def launch_gui():
     root = tk.Tk()
