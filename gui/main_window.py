@@ -27,7 +27,11 @@ class MainWindow:
         # Target IP Entry
         ttk.Label(self.root, text="Target IP:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
         self.target_ip_var = tk.StringVar()
-        ttk.Entry(self.root, textvariable=self.target_ip_var).grid(row=0, column=1, padx=5, pady=5, sticky="we")
+        self.ip_entry = ttk.Entry(self.root, textvariable=self.target_ip_var)
+        self.ip_entry.grid(row=0, column=1, padx=5, pady=5, sticky="we")
+
+        # Bind Enter key to scan
+        self.ip_entry.bind('<Return>', lambda event: self.scan())
 
         # “Ignore API Key” Checkbox
         self.ignore_key_var = tk.BooleanVar(value=False)
