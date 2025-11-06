@@ -11,6 +11,15 @@ def get_api_key():
     return None
 
 class MainWindow:
+    # temporary debug
+    def show_api_key(self):
+    api_key = get_api_key()
+    if api_key:
+        messagebox.showinfo("API Key", f"The current API key is:\n{api_key}")
+    else:
+        messagebox.showwarning("API Key", "No API key found.")
+
+    
     def __init__(self, root):
         self.root = root
         self.root.title("Talon Recon GUI")
@@ -35,6 +44,8 @@ class MainWindow:
 
         # Scan Button
         ttk.Button(root, text="Scan", command=self.scan).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+        # Show API Key Button (Temporary Debug)
+        ttk.Button(root, text="Show API Key", command=self.show_api_key).grid(row=2, column=2, padx=5, pady=5)
 
         # Output pane
         self.result_text = scrolledtext.ScrolledText(root, width=80, height=25, wrap=tk.WORD)
