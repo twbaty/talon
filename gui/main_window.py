@@ -33,6 +33,7 @@ class MainWindow:
             # Key exists → default use key (ignore = False)
             self.ignore_key_var.set(False)
             self.api_key_checkbox.state(['!disabled'])
+            self.api_key_checkbox.config(text="Ignore API Key")
 
         # Scan Button
         ttk.Button(root, text="Scan", command=self.scan).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
