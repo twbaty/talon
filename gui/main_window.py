@@ -13,11 +13,11 @@ def get_api_key():
 class MainWindow:
     # temporary debug
     def show_api_key(self):
-    api_key = get_api_key()
-    if api_key:
-        messagebox.showinfo("API Key", f"The current API key is:\n{api_key}")
-    else:
-        messagebox.showwarning("API Key", "No API key found.")
+        api_key = get_api_key()
+        if api_key:
+            messagebox.showinfo("API Key", f"The current API key is:\n{api_key}")
+        else:
+            messagebox.showwarning("API Key", "No API key found.")
 
     
     def __init__(self, root):
