@@ -23,35 +23,39 @@ class MainWindow:
         self.result_text = tk.Text(root, height=20, width=60)
         self.result_text.grid(row=3, column=0, columnspan=2)
 
-    def scan(self):
-        ip = self.ip_var.get()
-
-        if not is_valid_ip(ip):
-            self.result_text.delete(1.0, tk.END)
-            self.result_text.insert(tk.END, "[ERROR] Invalid IP address.")
-            return
-
-        service = self.service_var.get()
-        result = scan_ip(service, ip)
-
+def scan(self):
+    ip = self.ip_var.get()
+    if not is_valid_ip(ip):
         self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(tk.END, "[ERROR] Invalid IP address.")
+        return
 
-        if "error" in result:
-            self.result_text.insert(tk.END, f"[ERROR] {result['error']}")
-            return
+    service = self.service_var.get()
+    result = scan_ip(service, ip)
 
-        # Format and show meaningful data
-        data = result.get('data', {})
-        display = [
-            f"IP: {data.get('ipAddress', 'N/A')}",
-            f"Country: {data.get('countryCode', 'N/A')}",
-            f"Abuse Score: {data.get('abuseConfidenceScore', 'N/A')}%",
-            f"ISP: {data.get('isp', 'N/A')}",
-            f"Domain: {data.get('domain', 'N/A')}",
-            f"Last Reported: {data.get('lastReportedAt', 'N/A')}",
-        ]
+    self.result_text.delete(1.0, tk.END)
 
-        self.result_text.insert(tk.END, "\n".join(display))
+    # Handle redirect case (e.g., no API key fallback)
+    if "redirect" in result:
+        import webbrowser
+        webbrowser.open(result["redirect"])
+        self.result_text.insert(tk.END, f"[INFO] Opening browser for {ip} on AbuseIPDB...")
+        return
+
+    if "error" in result:
+        self.result_text.insert(tk.END, f"[ERROR] {result['error']}")
+        return
+
+    display = []
+    display.append(f"IP: {result.get('data', {}).get('ipAddress', 'N/A')}")
+    display.append(f"Country: {result.get('data', {}).get('countryCode', 'N/A')}")
+    display.append(f"Abuse Score: {result.get('data', {}).get('abuseConfidenceScore', 'N/A')}%")
+    display.append(f"ISP: {result.get('data', {}).get('isp', 'N/A')}")
+    display.append(f"Domain: {result.get('data', {}).get('domain', 'N/A')}")
+    display.append(f"Last Reported: {result.get('data', {}).get('lastReportedAt', 'N/A')}")
+
+    self.result_text.insert(tk.END, "\n".join(display))
+
 
 
 def launch_gui():
