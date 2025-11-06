@@ -23,20 +23,19 @@ class MainWindow:
         )
         self.api_key_checkbox.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-        # Fallback status label (starts hidden)
-        self.fallback_label = ttk.Label(self.root, text="Fallback mode: manual query", foreground="gray")
+        # Fallback status label (always present, starts blank)
+        self.fallback_label = ttk.Label(self.root, text="", foreground="gray")
         self.fallback_label.grid(row=2, column=0, columnspan=2, padx=5, pady=(0,5))
-        self.fallback_label.grid_remove()
 
         # Initial state based on config
         if not config_has_api_key():
             self.ignore_key_var.set(True)
             self.api_key_checkbox.config(state="disabled")
-            self.fallback_label.grid()  # show since forced fallback
+            self.fallback_label.config(text="Fallback mode: manual query")
         else:
             self.ignore_key_var.set(False)
             self.api_key_checkbox.config(state="normal")
-            self.fallback_label.grid_remove()
+            self.fallback_label.config(text="")  # blank until user checks
 
         # Scan + Show API Key buttons
         ttk.Button(self.root, text="Scan", command=self.scan).grid(row=3, column=0, columnspan=2, padx=5, pady=5)
@@ -57,9 +56,9 @@ class MainWindow:
 
     def update_fallback_label(self):
         if self.ignore_key_var.get():
-            self.fallback_label.grid()   # show
+            self.fallback_label.config(text="Fallback mode: manual query")
         else:
-            self.fallback_label.grid_remove()  # hide
+            self.fallback_label.config(text="")  # keep space reserved, just blank
 
     def scan(self):
         target_ip = self.target_ip_var.get().strip()
