@@ -19,10 +19,12 @@ class MainWindow:
         self.api_key_checkbox.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
         if not config_has_api_key():
-            self.has_key_var.set(False)
+            # No key exists → forced HTML fallback
+            self.has_key_var.set(True)        # Checked
             self.api_key_checkbox.state(['disabled'])
         else:
-            self.has_key_var.set(False)
+            # Key exists → default = use API
+            self.has_key_var.set(False)       # Unchecked
             self.api_key_checkbox.state(['!disabled'])
 
         # Scan Button
