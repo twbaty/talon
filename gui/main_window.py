@@ -24,30 +24,35 @@ class MainWindow:
         self.result_text.grid(row=3, column=0, columnspan=2)
 
     def scan(self):
-    ip = self.ip_var.get()
-    if not is_valid_ip(ip):
+        ip = self.ip_var.get()
+
+        if not is_valid_ip(ip):
+            self.result_text.delete(1.0, tk.END)
+            self.result_text.insert(tk.END, "[ERROR] Invalid IP address.")
+            return
+
+        service = self.service_var.get()
+        result = scan_ip(service, ip)
+
         self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, "[ERROR] Invalid IP address.")
-        return
-    service = self.service_var.get()
-    result = scan_ip(service, ip)
 
-    self.result_text.delete(1.0, tk.END)
+        if "error" in result:
+            self.result_text.insert(tk.END, f"[ERROR] {result['error']}")
+            return
 
-    if "error" in result:
-        self.result_text.insert(tk.END, f"[ERROR] {result['error']}")
-        return
+        # Format and show meaningful data
+        data = result.get('data', {})
+        display = [
+            f"IP: {data.get('ipAddress', 'N/A')}",
+            f"Country: {data.get('countryCode', 'N/A')}",
+            f"Abuse Score: {data.get('abuseConfidenceScore', 'N/A')}%",
+            f"ISP: {data.get('isp', 'N/A')}",
+            f"Domain: {data.get('domain', 'N/A')}",
+            f"Last Reported: {data.get('lastReportedAt', 'N/A')}",
+        ]
 
-    # Format and show meaningful data
-    display = []
-    display.append(f"IP: {result.get('data', {}).get('ipAddress', 'N/A')}")
-    display.append(f"Country: {result.get('data', {}).get('countryCode', 'N/A')}")
-    display.append(f"Abuse Score: {result.get('data', {}).get('abuseConfidenceScore', 'N/A')}%")
-    display.append(f"ISP: {result.get('data', {}).get('isp', 'N/A')}")
-    display.append(f"Domain: {result.get('data', {}).get('domain', 'N/A')}")
-    display.append(f"Last Reported: {result.get('data', {}).get('lastReportedAt', 'N/A')}")
+        self.result_text.insert(tk.END, "\n".join(display))
 
-    self.result_text.insert(tk.END, "\n".join(display))
 
 def launch_gui():
     root = tk.Tk()
