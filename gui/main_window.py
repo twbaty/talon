@@ -27,11 +27,15 @@ class MainWindow:
 
         if not config_has_api_key():  # No key exists → force ignore mode
             self.ignore_key_var.set(True)
-            self.api_key_checkbox.config(state="disabled", text="Fallback mode: manual query")
+            self.api_key_checkbox.config(state="disabled")
+            self.api_key_checkbox.config(text="Fallback mode: manual query")
+            print("DEBUG: Checkbox label set to:", self.api_key_checkbox.cget("text"))
         else:
             # Key exists → default use key (ignore = False)
             self.ignore_key_var.set(False)
-            self.api_key_checkbox.config(state="normal", text="Ignore API Key")
+            self.api_key_checkbox.config(state="normal")
+            self.api_key_checkbox.config(text="Ignore API Key")
+            print("DEBUG: Checkbox label set to:", self.api_key_checkbox.cget("text"))
 
         # Scan Button
         ttk.Button(root, text="Scan", command=self.scan).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
