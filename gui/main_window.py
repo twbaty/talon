@@ -1,61 +1,64 @@
 import tkinter as tk
-from tkinter import ttk
-import json
+from tkinter import ttk, scrolledtext, messagebox
 from core.router import scan_ip
-from utils.validators import is_valid_ip
+from core.config import config_has_api_key
 
 class MainWindow:
     def __init__(self, root):
         self.root = root
-        self.root.title("Talon Recon")
+        self.root.title("Talon Recon GUI")
 
-        self.service_var = tk.StringVar(value="AbuseIPDB")
-        self.ip_var = tk.StringVar()
+        # Target IP Entry
+        ttk.Label(root, text="Target IP:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        self.target_ip_var = tk.StringVar()
+        ttk.Entry(root, textvariable=self.target_ip_var).grid(row=0, column=1, padx=5, pady=5, sticky="we")
 
-        ttk.Label(root, text="Select Service:").grid(row=0, column=0, sticky="w")
-        ttk.Combobox(root, textvariable=self.service_var, values=["AbuseIPDB"]).grid(row=0, column=1)
+        # API Key Status Checkbox
+        self.has_key_var = tk.BooleanVar(value=False)
+        self.api_key_checkbox = ttk.Checkbutton(root, text="Use API Key", variable=self.has_key_var)
+        self.api_key_checkbox.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-        ttk.Label(root, text="IP Address:").grid(row=1, column=0, sticky="w")
-        ttk.Entry(root, textvariable=self.ip_var).grid(row=1, column=1)
+        if not config_has_api_key():
+            self.has_key_var.set(False)
+            self.api_key_checkbox.state(['disabled'])
+        else:
+            self.has_key_var.set(False)
+            self.api_key_checkbox.state(['!disabled'])
 
-        ttk.Button(root, text="Scan", command=self.scan).grid(row=2, column=0, columnspan=2)
+        # Scan Button
+        ttk.Button(root, text="Scan", command=self.scan).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
 
-        self.result_text = tk.Text(root, height=20, width=60)
-        self.result_text.grid(row=3, column=0, columnspan=2)
+        # Output pane
+        self.result_text = scrolledtext.ScrolledText(root, width=80, height=25, wrap=tk.WORD)
+        self.result_text.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
 
-def scan(self):
-    ip = self.ip_var.get()
-    if not is_valid_ip(ip):
-        self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, "[ERROR] Invalid IP address.")
-        return
+        # Configure grid
+        root.columnconfigure(1, weight=1)
 
-    service = self.service_var.get()
-    result = scan_ip(service, ip)
+    def scan(self):
+        target_ip = self.target_ip_var.get().strip()
 
-    self.result_text.delete(1.0, tk.END)
+        if not target_ip:
+            messagebox.showerror("Error", "Please enter a target IP.")
+            return
 
-    # Handle redirect case (e.g., no API key fallback)
-    if "redirect" in result:
-        import webbrowser
-        webbrowser.open(result["redirect"])
-        self.result_text.insert(tk.END, f"[INFO] Opening browser for {ip} on AbuseIPDB...")
-        return
+        use_api_key = self.has_key_var.get()
 
-    if "error" in result:
-        self.result_text.insert(tk.END, f"[ERROR] {result['error']}")
-        return
+        try:
+            result = scan_ip(target_ip, use_api_key=use_api_key)
+        except Exception as e:
+            result = {"error": f"Scan failed: {str(e)}"}
 
-    display = []
-    display.append(f"IP: {result.get('data', {}).get('ipAddress', 'N/A')}")
-    display.append(f"Country: {result.get('data', {}).get('countryCode', 'N/A')}")
-    display.append(f"Abuse Score: {result.get('data', {}).get('abuseConfidenceScore', 'N/A')}%")
-    display.append(f"ISP: {result.get('data', {}).get('isp', 'N/A')}")
-    display.append(f"Domain: {result.get('data', {}).get('domain', 'N/A')}")
-    display.append(f"Last Reported: {result.get('data', {}).get('lastReportedAt', 'N/A')}")
+        self.display_results(result)
 
-    self.result_text.insert(tk.END, "\n".join(display))
+    def display_results(self, result):
+        self.result_text.delete("1.0", tk.END)
 
+        if isinstance(result, dict):
+            for k, v in result.items():
+                self.result_text.insert(tk.END, f"{k}: {v}\n")
+        else:
+            self.result_text.insert(tk.END, str(result))
 
 
 def launch_gui():
