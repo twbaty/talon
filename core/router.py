@@ -2,6 +2,7 @@ import requests
 import os
 from bs4 import BeautifulSoup
 from core.config import get_api_key, config_has_api_key
+from core.abuseipdb import query_abuseipdb
 
 def abuseipdb_api_lookup(ip: str):
     """Query AbuseIPDB using the API key (JSON response)."""
