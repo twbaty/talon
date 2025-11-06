@@ -25,19 +25,15 @@ class MainWindow:
         self.api_key_checkbox = tk.Checkbutton(root, text="", variable=self.ignore_key_var)
         self.api_key_checkbox.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-        # Debug instrumentation
-        print("DEBUG: config_has_api_key() =", config_has_api_key())
-        print("DEBUG: get_api_key() =", repr(get_api_key()))
-
         if not config_has_api_key():  # No key exists → force ignore mode
             self.ignore_key_var.set(True)
             self.api_key_checkbox.config(state="disabled", text="Fallback mode: manual query")
+            self.api_key_checkbox.update_idletasks()  # force redraw
         else:
             # Key exists → default use key (ignore = False)
             self.ignore_key_var.set(False)
             self.api_key_checkbox.config(state="normal", text="Ignore API Key")
-
-        print("DEBUG: Checkbox label =", self.api_key_checkbox.cget("text"))
+            self.api_key_checkbox.update_idletasks()  # force redraw
 
         # Scan Button
         ttk.Button(root, text="Scan", command=self.scan).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
