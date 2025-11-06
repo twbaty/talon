@@ -4,6 +4,21 @@ import ipaddress
 from core.router import scan_ip
 from core.config import get_api_key, config_has_api_key
 
+def is_valid_host_ip(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip)
+        # Reject reserved/multicast/unspecified
+        if addr.is_multicast or addr.is_unspecified or addr.is_reserved:
+            return False
+        # For IPv4, reject .0 and .255
+        if isinstance(addr, ipaddress.IPv4Address):
+            last_octet = int(ip.split(".")[-1])
+            if last_octet == 0 or last_octet == 255:
+                return False
+        return True
+    except ValueError:
+        return False
+
 class MainWindow:
     def __init__(self, root):
         self.root = root
@@ -64,10 +79,8 @@ class MainWindow:
     def scan(self):
         target_ip = self.target_ip_var.get().strip()
         # Validate IP before scanning
-        try:
-            ipaddress.ip_address(target_ip)
-        except ValueError:
-            messagebox.showerror("Error", "Please enter a valid IPv4 or IPv6 address.")
+        if not is_valid_host_ip(target_ip):
+            messagebox.showerror("Error", "Please enter a valid host IP (not network/broadcast).")
             return
 
         ignore_key = self.ignore_key_var.get()
