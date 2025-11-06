@@ -1,4 +1,4 @@
-# talon.py
+# main.py
 from gui.main_window import launch_gui
 import os
 from dotenv import load_dotenv
