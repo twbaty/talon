@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
+import ipaddress
 from core.router import scan_ip
 from core.config import get_api_key, config_has_api_key
 
@@ -35,7 +36,7 @@ class MainWindow:
         else:
             self.ignore_key_var.set(False)
             self.api_key_checkbox.config(state="normal")
-            self.fallback_label.config(text="")  # blank until user checks
+            self.fallback_label.config(text="")
 
         # Scan + Show API Key buttons
         ttk.Button(self.root, text="Scan", command=self.scan).grid(row=3, column=0, columnspan=2, padx=5, pady=5)
@@ -58,12 +59,15 @@ class MainWindow:
         if self.ignore_key_var.get():
             self.fallback_label.config(text="Fallback mode: manual query")
         else:
-            self.fallback_label.config(text="")  # keep space reserved, just blank
+            self.fallback_label.config(text="")
 
     def scan(self):
         target_ip = self.target_ip_var.get().strip()
-        if not target_ip:
-            messagebox.showerror("Error", "Please enter a target IP.")
+        # Validate IP before scanning
+        try:
+            ipaddress.ip_address(target_ip)
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a valid IPv4 or IPv6 address.")
             return
 
         ignore_key = self.ignore_key_var.get()
